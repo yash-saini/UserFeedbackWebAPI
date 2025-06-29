@@ -35,19 +35,6 @@ namespace UserFeedbackWebAPI.Controllers
             return Ok(feedback);
         }
 
-        // POST: api/feedback
-        [HttpPost]
-        public IActionResult CreateFeedback([FromBody] FeedBack feedback)
-        {
-            if (feedback == null)
-            {
-                return BadRequest("Feedback cannot be null.");
-            }
-            _context.Feedbacks.Add(feedback);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetAllFeedback), new { id = feedback.Id }, feedback);
-        }
-
         [HttpDelete("{id}")]
         public IActionResult DeleteFeedback(int id)
         {
@@ -59,6 +46,22 @@ namespace UserFeedbackWebAPI.Controllers
             _context.Feedbacks.Remove(feedback);
             _context.SaveChanges();
             return NoContent();
+        }
+
+        [HttpPost]
+        public IActionResult SubmitFeedBack([FromBody] FeedBack feedback)
+        {
+            if (feedback == null)
+            {
+                return BadRequest("Feedback cannot be null.");
+            }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            _context.Feedbacks.Add(feedback);
+            _context.SaveChanges();
+            return CreatedAtAction(nameof(GetFeedbackById), new { id = feedback.Id }, feedback);
         }
     }
 }
