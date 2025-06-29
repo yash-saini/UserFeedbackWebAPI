@@ -17,10 +17,36 @@ namespace UserFeedbackWebAPI.Controllers
 
         // GET: api/feedback
         [HttpGet]
-        public IActionResult GetAllFeedback()
+        public IActionResult GetAllFeedback(
+            [FromQuery] int? rating = null,
+            [FromQuery] string? email = null,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10
+            )
         {
-            var feedbackList = _context.Feedbacks.ToList();
-            return Ok(feedbackList);
+            var query = _context.Feedbacks.AsQueryable();
+            if (rating.HasValue)
+            {
+                query = query.Where(f => f.Rating == rating.Value);
+            }
+            if (!string.IsNullOrEmpty(email))
+            {
+                query = query.Where(f => f.Email.Contains(email));
+            }
+            var totalItems = query.Count();
+            var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+            var feedbacks = query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+            return Ok(new
+            {
+                TotalItems = totalItems,
+                TotalPages = totalPages,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                Feedbacks = feedbacks
+            });
         }
 
         // GET: api/feedback/{id}
