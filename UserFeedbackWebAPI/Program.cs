@@ -51,7 +51,7 @@ builder.Services.AddSwaggerGen(
             Description = "Enter your JWT token.\n\nExample: abc123\n\n"+
                 "Note: Swagger will show 'Authorized' after you enter ANY value. " +
                           "This doesn't mean your token is valid - it will only be validated when you make an API request."
-    });
+         });
         options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
         {
             {
@@ -66,7 +66,10 @@ builder.Services.AddSwaggerGen(
                 new string[] {}
             }
         });
+
+
     });
+
 
 var app = builder.Build();
 
