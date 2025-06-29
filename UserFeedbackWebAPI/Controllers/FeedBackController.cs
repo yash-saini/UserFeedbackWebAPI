@@ -51,7 +51,7 @@ namespace UserFeedbackWebAPI.Controllers
 
         // GET: api/feedback/{id}
         [HttpGet("{id}")]
-        public IActionResult GetFeedbackById(int id)
+        public IActionResult GetFeedbackById(Guid id)
         {
             var feedback = _context.Feedbacks.Find(id);
             if (feedback == null)
@@ -62,7 +62,7 @@ namespace UserFeedbackWebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteFeedback(int id)
+        public IActionResult DeleteFeedback(Guid id)
         {
             var feedback = _context.Feedbacks.Find(id);
             if (feedback == null)
@@ -85,6 +85,8 @@ namespace UserFeedbackWebAPI.Controllers
             {
                 return BadRequest(ModelState);
             }
+
+            feedback.Id = Guid.NewGuid();
             _context.Feedbacks.Add(feedback);
             _context.SaveChanges();
             return CreatedAtAction(nameof(GetFeedbackById), new { id = feedback.Id }, feedback);
