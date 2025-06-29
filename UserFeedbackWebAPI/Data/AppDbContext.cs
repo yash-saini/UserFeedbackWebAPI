@@ -12,5 +12,7 @@ namespace UserFeedbackWebAPI.Data
         }
 
         public DbSet<FeedBack> Feedbacks { get; set; }
+        public DbSet<AppUser> Users { get; set; }
+
     }
 }
