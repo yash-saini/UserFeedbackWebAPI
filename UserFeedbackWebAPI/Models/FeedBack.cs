@@ -4,7 +4,8 @@ namespace UserFeedbackWebAPI.Models
 {
     public class FeedBack
     {
-        public int Id { get; set; }
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Invalid email address")]
