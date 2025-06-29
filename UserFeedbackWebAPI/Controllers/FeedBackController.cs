@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using UserFeedbackWebAPI.Data;
 using UserFeedbackWebAPI.Models;
 
@@ -62,6 +63,7 @@ namespace UserFeedbackWebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize]
         public IActionResult DeleteFeedback(Guid id)
         {
             var feedback = _context.Feedbacks.Find(id);
@@ -75,6 +77,7 @@ namespace UserFeedbackWebAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         public IActionResult SubmitFeedBack([FromBody] FeedBack feedback)
         {
             if (feedback == null)
