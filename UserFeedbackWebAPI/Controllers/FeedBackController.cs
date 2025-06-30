@@ -63,7 +63,7 @@ namespace UserFeedbackWebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public IActionResult DeleteFeedback(Guid id)
         {
             var feedback = _context.Feedbacks.Find(id);
@@ -77,7 +77,7 @@ namespace UserFeedbackWebAPI.Controllers
         }
 
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = "User,Admin")]
         public IActionResult SubmitFeedBack([FromBody] FeedBack feedback)
         {
             if (feedback == null)
