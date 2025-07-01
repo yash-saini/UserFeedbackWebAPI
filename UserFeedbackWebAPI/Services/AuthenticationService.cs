@@ -14,6 +14,7 @@ namespace UserFeedbackWebAPI.Services
     {
         Task<string?> RegisterAsync(string email, string password, string role);
         Task<string?> LoginAsync(string email, string password);
+        Task<string> ConfirmEmailAsync(string email, string token);
     }
 
     public class AuthenticationService : IAuthService
@@ -21,11 +22,13 @@ namespace UserFeedbackWebAPI.Services
         private readonly AppDbContext _context;
         private readonly IConfiguration _config;
         private readonly PasswordHasher<AppUser> _passwordHasher = new();
+        private readonly IEmailService _emailService;
 
-        public AuthenticationService(AppDbContext context, IConfiguration config)
+        public AuthenticationService(AppDbContext context, IConfiguration config, IEmailService emailService)
         {
             _context = context;
             _config = config;
+            _emailService = emailService;
         }
 
         public async Task<string?> LoginAsync(string email, string password)
@@ -34,6 +37,10 @@ namespace UserFeedbackWebAPI.Services
             if (user == null)
             {
                 return "Invalid email or password."; 
+            }
+            if (!user.IsEmailConfirmed)
+            {
+                return "Email not confirmed.";
             }
             var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
             if (result != PasswordVerificationResult.Success)
@@ -69,15 +76,40 @@ namespace UserFeedbackWebAPI.Services
             {
                 return "User already exists."; 
             }
+            var token = Guid.NewGuid().ToString();
             var user = new AppUser
             {
                 Email = normalizedEmail,
                 PasswordHash = new PasswordHasher<AppUser>().HashPassword(null, password),
-                Role = string.IsNullOrEmpty(role) ? "User" : role
+                Role = string.IsNullOrEmpty(role) ? "User" : role,
+                EmailConfirmationToken = token,
+                IsEmailConfirmed = false
             };
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+
+            var confirmationLink = $"https://localhost:7071/api/auth/confirm?email={normalizedEmail}&token={token}";
+            var subject = "Confirm your email";
+            var htmlBody = $"<p>Please confirm your email by clicking <a href='{confirmationLink}'>here</a>.</p>";
+
+            await _emailService.SendEmailAsync(normalizedEmail, subject, htmlBody);
+
             return "User registered successfully.";
         }
+
+        public async Task<string> ConfirmEmailAsync(string email, string token)
+        {
+            var normalizedEmail = Uri.UnescapeDataString(email).Trim().ToLower();
+            var user = await _context.Users
+                .SingleOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+            if (user == null || user.EmailConfirmationToken != token)
+                return "Invalid token or email.";
+            user.IsEmailConfirmed = true;
+            user.EmailConfirmationToken = null;
+            await _context.SaveChangesAsync();
+
+            return "Email confirmed successfully.";
+        }
+
     }
 }

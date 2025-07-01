@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using UserFeedbackWebAPI.Models.Auth;
 using UserFeedbackWebAPI.Services;
 
@@ -49,6 +50,17 @@ namespace UserFeedbackWebAPI.Controllers
                 return Unauthorized("Invalid email or password.");
             }
             return Ok(new { token });
+        }
+
+        [HttpGet("confirm")]
+        public async Task<IActionResult> ConfirmEmail([FromQuery] string email, [FromQuery] string token)
+        {
+            var result = await _authService.ConfirmEmailAsync(email, token);
+
+            if (result == "Invalid token or email.")
+                return BadRequest(result);
+
+            return Ok(result);
         }
     }
 }
