@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -59,19 +60,24 @@ namespace UserFeedbackWebAPI.Services
 
         public async Task<string?> RegisterAsync(string email, string password, string role)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == email))
+            var emailAttribute = new EmailAddressAttribute();
+            if (!emailAttribute.IsValid(email))
+                return "Invalid email format.";
+
+            var normalizedEmail = email.Trim().ToLower();
+            if (await _context.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail))
             {
                 return "User already exists."; 
             }
             var user = new AppUser
             {
-                Email = email,
+                Email = normalizedEmail,
                 PasswordHash = new PasswordHasher<AppUser>().HashPassword(null, password),
                 Role = string.IsNullOrEmpty(role) ? "User" : role
             };
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return "User registered successfully."; // Registration successful
+            return "User registered successfully.";
         }
     }
 }

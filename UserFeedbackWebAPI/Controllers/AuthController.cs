@@ -31,6 +31,8 @@ namespace UserFeedbackWebAPI.Controllers
             {
                 return BadRequest("Registration failed. User may already exist.");
             }
+            if (result == "Invalid email format.")
+                return BadRequest("Invalid email format.");
             return Ok(new { message = "User registered successfully." });
         }
 
