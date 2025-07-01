@@ -1,12 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using UserFeedbackWebAPI.Data;
-using UserFeedbackWebAPI.Models;
+﻿using Microsoft.AspNetCore.Mvc;
 using UserFeedbackWebAPI.Models.Auth;
+using UserFeedbackWebAPI.Services;
 
 namespace UserFeedbackWebAPI.Controllers
 {
@@ -14,61 +8,47 @@ namespace UserFeedbackWebAPI.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly IConfiguration _config;
-        private readonly PasswordHasher<AppUser> _passwordHasher = new();
+        private readonly IAuthService _authService;
 
-        public AuthController(AppDbContext context, IConfiguration config)
+        public AuthController(IAuthService authService)
         {
-            _context = context;
-            _config = config;
+            _authService = authService;
         }
 
         [HttpPost("register")]
-        public IActionResult Register([FromBody] RegisterRequest request)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            if (_context.Users.Any(u => u.Email == request.Email))
-                return Conflict("User already exists.");
-
-            var user = new AppUser
+            if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
             {
-                Email = request.Email,
-                PasswordHash = _passwordHasher.HashPassword(null, request.Password),
-                Role = string.IsNullOrEmpty(request.Role) ? "User" : request.Role
-            };
-
-            _context.Users.Add(user);
-            _context.SaveChanges();
-
-            return Ok("User registered successfully.");
+                return BadRequest("Email and password are required.");
+            }
+            if (request.Role != "User" && request.Role != "Admin")
+            {
+                return BadRequest("Invalid role. Only 'User' or 'Admin' are allowed.");
+            }
+            var result = await _authService.RegisterAsync(request.Email, request.Password, request.Role);
+            if (result == null)
+            {
+                return BadRequest("Registration failed. User may already exist.");
+            }
+            if (result == "Invalid email format.")
+                return BadRequest("Invalid email format.");
+            return Ok(new { message = "User registered successfully." });
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = _context.Users.SingleOrDefault(u => u.Email == request.Email);
-            if (user == null)
-                return Unauthorized("Invalid email or password.");
-
-            var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
-            if (result != PasswordVerificationResult.Success)
-                return Unauthorized("Invalid email or password.");
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? "this is my custom super secret key for jwt"); // Use same key format
-            var tokenDescriptor = new SecurityTokenDescriptor
+            if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
             {
-                Subject = new ClaimsIdentity(new[] {
-                    new Claim(ClaimTypes.Name, user.Email),
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Role, user.Role)
-                }),
-                Expires = DateTime.UtcNow.AddHours(2),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return Ok(new { token = tokenHandler.WriteToken(token) });
+                return BadRequest("Email and password are required.");
+            }
+            var token = await _authService.LoginAsync(request.Email, request.Password);
+            if (token == null)
+            {
+                return Unauthorized("Invalid email or password.");
+            }
+            return Ok(new { token });
         }
     }
 }
