@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using UserFeedbackWebAPI.Data;
 using UserFeedbackWebAPI.Models;
+using UserFeedbackWebAPI.Services;
 
 namespace UserFeedbackWebAPI.Controllers
 {
@@ -10,51 +11,35 @@ namespace UserFeedbackWebAPI.Controllers
     public class FeedBackController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IFeedbackService _service;
 
-        public FeedBackController(AppDbContext context)
+        public FeedBackController(IFeedbackService service)
         {
-            _context = context;
+            _service = service;
         }
 
         // GET: api/feedback
         [HttpGet]
-        public IActionResult GetAllFeedback(
+        public async Task<IActionResult> GetAllFeedback(
             [FromQuery] int? rating = null,
             [FromQuery] string? email = null,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10
             )
         {
-            var query = _context.Feedbacks.AsQueryable();
-            if (rating.HasValue)
-            {
-                query = query.Where(f => f.Rating == rating.Value);
-            }
-            if (!string.IsNullOrEmpty(email))
-            {
-                query = query.Where(f => f.Email.Contains(email));
-            }
-            var totalItems = query.Count();
-            var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
-            var feedbacks = query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-            return Ok(new
-            {
-                TotalItems = totalItems,
-                TotalPages = totalPages,
-                PageNumber = pageNumber,
-                PageSize = pageSize,
-                Feedbacks = feedbacks
-            });
+            var feedbackList = await _service.GetAllAsync(rating, email, pageNumber, pageSize);
+            return Ok(feedbackList);
         }
 
         // GET: api/feedback/{id}
         [HttpGet("{id}")]
-        public IActionResult GetFeedbackById(Guid id)
+        public async Task<IActionResult> GetFeedbackById(Guid id)
         {
-            var feedback = _context.Feedbacks.Find(id);
+            if (id == Guid.Empty)
+            {
+                return BadRequest("Invalid feedback ID.");
+            }
+            var feedback = await _service.GetByIdAsync(id);
             if (feedback == null)
             {
                 return NotFound($"Feedback with ID {id} not found.");
@@ -64,21 +49,30 @@ namespace UserFeedbackWebAPI.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
-        public IActionResult DeleteFeedback(Guid id)
+        public async Task<IActionResult> DeleteFeedback(Guid id)
         {
-            var feedback = _context.Feedbacks.Find(id);
-            if (feedback == null)
+            if (id == Guid.Empty)
             {
-                return NotFound($"Feedback with ID {id} not found.");
+                return BadRequest("Invalid feedback ID.");
             }
-            _context.Feedbacks.Remove(feedback);
-            _context.SaveChanges();
-            return NoContent();
+            try
+            {
+                var deleted = await _service.DeleteAsync(id);
+                if (!deleted)
+                {
+                    return NotFound($"Feedback with ID {id} not found.");
+                }
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         [HttpPost]
         [Authorize(Roles = "User,Admin")]
-        public IActionResult SubmitFeedBack([FromBody] FeedBack feedback)
+        public async Task<IActionResult> SubmitFeedBack([FromBody] FeedBack feedback)
         {
             if (feedback == null)
             {
@@ -88,11 +82,15 @@ namespace UserFeedbackWebAPI.Controllers
             {
                 return BadRequest(ModelState);
             }
-
-            feedback.Id = Guid.NewGuid();
-            _context.Feedbacks.Add(feedback);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetFeedbackById), new { id = feedback.Id }, feedback);
+            try
+            {
+                var createdFeedback = await _service.CreateAsync(feedback);
+                return CreatedAtAction(nameof(GetFeedbackById), new { id = createdFeedback.Id }, createdFeedback);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
     }
 }
