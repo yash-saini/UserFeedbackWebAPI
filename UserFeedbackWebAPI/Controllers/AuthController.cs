@@ -62,5 +62,30 @@ namespace UserFeedbackWebAPI.Controllers
 
             return Ok(result);
         }
+
+        [HttpPost("resend-confirmation")]
+        public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest request)
+        {
+            var result = await _authService.ResendConfirmationEmailAsync(request.Email);
+
+            return result switch
+            {
+                "Already confirmed" => BadRequest("Email is already confirmed."),
+                "Not found" => NotFound("Email not registered."),
+                "Sent" => Ok("Confirmation email resent successfully."),
+                _ => StatusCode(500, "An unexpected error occurred.")
+            };
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            var result = await _authService.RefreshTokenAsync(request.Email, request.RefreshToken);
+
+            if (result == null)
+                return Unauthorized("Invalid or expired refresh token.");
+
+            return Ok(result);
+        }
     }
 }

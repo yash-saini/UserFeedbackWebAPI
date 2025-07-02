@@ -14,6 +14,9 @@ namespace UserFeedbackWebAPI.Models
         public string Role { get; set; } = "User";
         public bool IsEmailConfirmed { get; set; } = false;
         public string? EmailConfirmationToken { get; set; }
+        public DateTime? EmailConfirmationTokenExpires { get; set; }
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiry { get; set; }
 
     }
 }
