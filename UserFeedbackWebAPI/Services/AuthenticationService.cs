@@ -20,6 +20,7 @@ namespace UserFeedbackWebAPI.Services
         Task<string> ConfirmEmailAsync(string email, string token);
         Task<string> ResendConfirmationEmailAsync(string email);
         Task<AuthResponse?> RefreshTokenAsync(string email, string refreshToken);
+        Task<bool> LogoutAsync(string email);
     }
 
     public class AuthenticationService : IAuthService
@@ -188,6 +189,19 @@ namespace UserFeedbackWebAPI.Services
             await _emailService.SendEmailAsync(user.Email, subject, htmlBody);
 
             return "Sent";
+        }
+
+        public async Task<bool> LogoutAsync(string email)
+        {
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+            if (user == null)
+                return false;
+
+            user.RefreshToken = null;
+            user.RefreshTokenExpiry = null;
+
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

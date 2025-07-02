@@ -87,5 +87,12 @@ namespace UserFeedbackWebAPI.Controllers
 
             return Ok(result);
         }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] LogoutRequest request)
+        {
+            var success = await _authService.LogoutAsync(request.Email);
+            return success ? Ok("Logged out successfully.") : NotFound("User not found.");
+        }
     }
 }
