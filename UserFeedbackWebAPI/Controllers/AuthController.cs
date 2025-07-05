@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using UserFeedbackWebAPI.Models.Auth;
 using UserFeedbackWebAPI.Services;
 
